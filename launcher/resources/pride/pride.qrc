@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/pride">
+        <file>hero.png</file>
+        <file>pride-icon.png</file>
+    </qresource>
+</RCC>

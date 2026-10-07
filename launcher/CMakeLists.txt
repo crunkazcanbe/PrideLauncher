@@ -832,6 +832,10 @@ SET(LAUNCHER_SOURCES
     ui/GuiUtil.cpp
     ui/MainWindow.h
     ui/MainWindow.cpp
+    pride/PackUpdater.h
+    pride/PackUpdater.cpp
+    pride/PrideHome.h
+    pride/PrideHome.cpp
     ui/InstanceWindow.h
     ui/InstanceWindow.cpp
     ui/ViewLogWindow.h
@@ -1279,6 +1283,7 @@ if (NOT Apple)
 endif()
 
 qt_add_resources(LAUNCHER_RESOURCES
+    resources/pride/pride.qrc
     resources/backgrounds/backgrounds.qrc
     resources/multimc/multimc.qrc
     resources/pe_dark/pe_dark.qrc

@@ -41,6 +41,8 @@
  */
 
 #include "Application.h"
+#include "pride/PrideHome.h"
+#include "HardwareInfo.h"
 #include "BuildConfig.h"
 
 #include "DataMigrationTask.h"
@@ -748,6 +750,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("JvmArgs", "");
         m_settings->registerSetting("IgnoreJavaCompatibility", false);
         m_settings->registerSetting("IgnoreJavaWizard", false);
+        m_settings->registerSetting("PrideConfigured", false);   // Pride Launcher: first-run defaults applied
         auto defaultEnableAutoJava = m_settings->get("JavaPath").toString().isEmpty();
         m_settings->registerSetting("AutomaticJavaSwitch", defaultEnableAutoJava);
         m_settings->registerSetting("AutomaticJavaDownload", defaultEnableAutoJava);
@@ -1202,6 +1205,25 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
 bool Application::createSetupWizard()
 {
+    // Pride Launcher: set itself up for the Pride pack on first run instead of asking players technical questions
+    if (!settings()->get("PrideConfigured").toBool()) {
+        if (settings()->get("Language").toString().isEmpty())
+        {
+            QString lang = QLocale::system().name();          // "C"/empty on some systems → English
+            settings()->set("Language", lang.isEmpty() || lang == "C" ? QString("en_US") : lang);
+        }
+        settings()->set("AutomaticJavaDownload", true);        // Pride needs Java 25: fetch the right one automatically
+        settings()->set("AutomaticJavaSwitch", true);
+        settings()->set("UserAskedAboutAutomaticJavaDownload", true);
+        settings()->set("IgnoreJavaWizard", true);
+        const auto ram = HardwareInfo::totalRamMiB();           // ~700 mods: 10 GB if the computer has room, else 60% of RAM
+        const int max = ram >= 16384 ? 10240 : std::max(4096, static_cast<int>(ram * 0.6));
+        settings()->set("MaxMemAlloc", max);
+        settings()->set("MinMemAlloc", 1024);
+        settings()->set("ApplicationTheme", QString("dark"));   // dusk-friendly, no theme page for players
+        settings()->set("IconTheme", QString("pe_colored"));
+        settings()->set("PrideConfigured", true);
+    }
     bool javaRequired = [this]() {
         if (BuildConfig.JAVA_DOWNLOADER_ENABLED && settings()->get("AutomaticJavaDownload").toBool()) {
             return false;
@@ -1368,6 +1390,16 @@ void Application::performMainStartupAction()
         }
     }
     if (!m_mainWindow) {
+        // Pride Launcher: the one-modpack home window (PRIDE_CLASSIC=1 → the classic window instead)
+        if (qEnvironmentVariable("PRIDE_CLASSIC") != "1") {
+            auto* home = new Pride::PrideHome();
+            connect(home, &Pride::PrideHome::isClosing, this, &Application::on_windowClose);
+            m_openWindows++;
+            home->setAttribute(Qt::WA_DeleteOnClose);
+            home->show();
+            qDebug() << "<> Pride home shown.";
+            return;
+        }
         // normal main window
         showMainWindow(false);
         qDebug() << "<> Main window shown.";
